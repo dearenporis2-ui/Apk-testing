@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -24,33 +24,36 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
+      - name: Create Bubblewrap config to skip JDK prompt
+        run: |
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\": \"$JAVA_HOME\", \"androidSdkPath\": \"$ANDROID_SDK_ROOT\"}" > ~/.bubblewrap/config.json
+          cat ~/.bubblewrap/config.json
 
       - name: Initialize Bubblewrap project
         run: |
           mkdir -p apk-build
           cd apk-build
-          bubblewrap init \
+          echo "N" | bubblewrap init \
             --manifest "https://dearenporis2-ui.github.io/Apk-testing/manifest.json" \
-            --directory . \
             --skipPwaValidation
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
 
       - name: Build APK
         run: |
           cd apk-build
-          bubblewrap build --skipSigning
-        env:
-          BUBBLEWRAP_DISABLE_TELEMETRY: true
+          echo "N" | bubblewrap build --skipSigning
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AXIS-debug.apk
-          path: apk-build/app-debug.apk
+          name: AXIS-debug
+          path: |
+            apk-build/app-debug.apk
+            apk-build/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: warn
